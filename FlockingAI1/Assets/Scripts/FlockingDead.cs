@@ -8,19 +8,24 @@ public class FlockingDead : MonoBehaviour {
     private Swarm swarm;
 
     [SerializeField]
-    private Sprite regularSprite;
+    public Sprite regularSprite;
 
     [SerializeField]
-    private Sprite zombieSprite;
+    public Sprite zombieSprite;
 
     [SerializeField]
     private GameObject agentPrefab;
 
+    [SerializeField]
+    private BoxCollider2D boundary;
+
+    [SerializeField]
+    private int swarmCount;
+
     public void Start()
     {
-        int boundary = 640;
+        swarm = new Swarm(swarmCount, boundary, zombieSprite, regularSprite, agentPrefab);
 
-        swarm = new Swarm(boundary, agentPrefab);
         timer = 0;
     }
 
