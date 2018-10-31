@@ -7,8 +7,10 @@ public class Agent : MonoBehaviour {
     private static float space = 50f;
     private static float movementSpeed = 75f;
     private static float rotateSpeed = 3f;
+    private static float distToBoundary = 100f;
 
     private BoxCollider2D boundary;
+    private Vector2 mySize;
 
     public float dX;
     public float dY;
@@ -17,9 +19,12 @@ public class Agent : MonoBehaviour {
     public Vector2 position;
     public SpriteRenderer sprRenderer;
 
+    private Sprite zombieSprite;
+
     public void Initialize(bool zombie, Sprite zombieSprite, Sprite regularSprite, BoxCollider2D boundary)
     {
         position = new Vector2(Random.Range(boundary.bounds.min.x, boundary.bounds.max.x), Random.Range(boundary.bounds.min.y, boundary.bounds.max.y));
+        transform.position = position;
 
         this.boundary = boundary;
 
@@ -27,10 +32,14 @@ public class Agent : MonoBehaviour {
         
         sprRenderer = GetComponent<SpriteRenderer>();
 
+        this.zombieSprite = zombieSprite;
+
         if (isZombie)
             sprRenderer.sprite = zombieSprite;
         else
             sprRenderer.sprite = regularSprite;
+
+        mySize = new Vector2(GetComponent<SpriteRenderer>().bounds.size.x, GetComponent<SpriteRenderer>().bounds.size.y);
     }
 
     public void Move(List<Agent> agents)
@@ -130,15 +139,15 @@ public class Agent : MonoBehaviour {
     private void CheckBounds()
     {
         // TODO: improve boundary check
-        if (position.x < boundary.bounds.min.x)
-            dX += boundary.bounds.min.x - position.x;
-        if (position.y < boundary.bounds.min.y)
-            dY += boundary.bounds.min.y - position.y;
+        if (position.x < boundary.bounds.min.x + distToBoundary)
+            dX += boundary.bounds.min.x + distToBoundary - position.x;
+        if (position.y < boundary.bounds.min.y + distToBoundary)
+            dY += boundary.bounds.min.y + distToBoundary - position.y;
 
-        if (position.x > boundary.bounds.max.x)
-            dX += boundary.bounds.max.x - position.x;
-        if (position.y > boundary.bounds.max.y)
-            dY += boundary.bounds.max.y - position.y;
+        if (position.x > boundary.bounds.max.x - mySize.x - distToBoundary)
+            dX += boundary.bounds.max.x - mySize.x - distToBoundary - position.x;
+        if (position.y > boundary.bounds.max.y - mySize.y - distToBoundary)
+            dY += boundary.bounds.max.y - mySize.y - distToBoundary - position.y;
     }
 
     private void CheckSpeed()
@@ -153,5 +162,23 @@ public class Agent : MonoBehaviour {
             dX = dX * s / val;
             dY = dY * s / val;
         }
+    }
+
+    public void OnTriggerEnter2D(Collider2D other)
+    {
+        Agent otherAgent = other.gameObject.GetComponent<Agent>();
+
+        if(otherAgent != null)
+        {
+            // if im not a zombie and the other is, become a zombie
+            if (otherAgent.isZombie && !this.isZombie)
+                BecomeZombie();
+        }
+    }
+
+    private void BecomeZombie()
+    {
+        isZombie = true;
+        sprRenderer.sprite = zombieSprite;
     }
 }
