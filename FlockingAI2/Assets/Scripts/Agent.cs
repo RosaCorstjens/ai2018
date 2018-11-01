@@ -3,56 +3,60 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Agent : MonoBehaviour {
-    private static float sight = 100f;
-    private static float space = 50f;
-    private static float movementSpeed = 75f;
-    private static float rotateSpeed = 3f;
-    private static float distToBoundary = 100f;
+    private static float sight = 50f;
+    private static float space = 20f;
+    private static float movementSpeed = 50f;
+    private static float rotateSpeed = 10f;
+    private static float distToBoundary = 10f;
 
-    private BoxCollider2D boundary;
+    private Vector3 boundary;
+    private Vector3 mySize;
 
     public float dX;
-    public float dY;
+    public float dZ;
 
     public bool isZombie;
-    public Vector2 position;
-    public SpriteRenderer sprRenderer;
+    public Vector3 position;
+    public MeshRenderer meshRenderer;
 
-    private Sprite zombieSprite;
+    private Material zombieMaterial;
 
-    public void Initialize(bool zombie, Sprite zombieSprite, Sprite regularSprite, BoxCollider2D boundary)
+    public void Initialize(bool zombie, Material zombieMaterial, Material regularMaterial, GameObject boundary)
     {
-        position = new Vector2(Random.Range(boundary.bounds.min.x + distToBoundary, boundary.bounds.max.x - distToBoundary), Random.Range(boundary.bounds.min.y + distToBoundary, boundary.bounds.max.y - distToBoundary));
-        transform.position = position;
+        this.boundary = boundary.GetComponent<BoxCollider>().bounds.size;
 
-        this.boundary = boundary;
+        position = RandomPointOnPlane(boundary.gameObject);
+        transform.position = position;
 
         isZombie = zombie;
         
-        sprRenderer = GetComponent<SpriteRenderer>();
+        meshRenderer = GetComponent<MeshRenderer>();
 
-        this.zombieSprite = zombieSprite;
+        this.zombieMaterial = zombieMaterial;
 
         if (isZombie)
-            sprRenderer.sprite = zombieSprite;
+            meshRenderer.material = zombieMaterial;
         else
-            sprRenderer.sprite = regularSprite;
+            meshRenderer.material = regularMaterial;
+
+        Bounds myBounds = GetComponent<MeshFilter>().mesh.bounds;
+        mySize = new Vector3(myBounds.size.x, myBounds.size.y, myBounds.size.z);
     }
 
     public void Move(List<Agent> agents)
     {
         //Agents flock, zombie's hunt 
-        if (!isZombie) Flock(agents, 3.5f, 0.01f, 1f);
+        if (!isZombie) Flock(agents, 2.5f, 0.01f, 1f);
         else Hunt(agents);
         CheckBounds();
         CheckSpeed();
 
         position.x += dX;
-        position.y += dY;
+        position.z += dZ;
 
-        Vector2 direction = (Vector3)position - transform.position;
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+        Vector3 direction = position - transform.position;
+        direction.y = 0;
+        Quaternion rotation = Quaternion.LookRotation(direction);
         transform.rotation = Quaternion.Slerp(transform.rotation, rotation, rotateSpeed * Time.deltaTime);
 
         transform.position = position;
@@ -60,15 +64,16 @@ public class Agent : MonoBehaviour {
 
     private void Flock(List<Agent> agents, float scaleFactorS, float scaleFactorC, float scaleFactorA)
     {
-        Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        // TODO
+        /*Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         float mouseDistance = Distance(position, mousePosition);
 
         if (mouseDistance < sight)
         {
             // Evade
             dX += position.x - mousePosition.x;
-            dY += position.y - mousePosition.y;
-        }
+            dZ += position.z - mousePosition.y;
+        }*/
 
         foreach (Agent a in agents)
         {
@@ -79,26 +84,26 @@ public class Agent : MonoBehaviour {
                 {
                     // Separation
                     dX += (position.x - a.position.x) * scaleFactorS;
-                    dY += (position.y - a.position.y) * scaleFactorS;
+                    dZ += (position.z - a.position.z) * scaleFactorS;
                 }
                 else if (distance < sight)
                 {
                     // Cohesion
                     dX += (a.position.x - position.x) * scaleFactorC;
-                    dY += (a.position.y - position.y) * scaleFactorC;
+                    dZ += (a.position.z - position.z) * scaleFactorC;
                 }
                 if (distance < sight)
                 {
                     // Alignment
                     dX += a.dX * scaleFactorA;
-                    dY += a.dY * scaleFactorA;
+                    dZ += a.dZ * scaleFactorA;
                 }
             }
             if (a.isZombie && distance < sight)
             {
                 // Evade
                 dX += position.x - a.position.x;
-                dY += position.y - a.position.y;
+                dZ += position.z - a.position.z;
             }
         }
     }
@@ -123,28 +128,27 @@ public class Agent : MonoBehaviour {
         {
             // Move towards prey.
             dX += prey.position.x - position.x;
-            dY += prey.position.y - position.y;
+            dZ += prey.position.z - position.z;
         }
     }
 
-    private static float Distance(Vector2 p1, Vector2 p2)
+    private static float Distance(Vector3 p1, Vector3 p2)
     {
-        float val = Mathf.Pow(p1.x - p2.x, 2) + Mathf.Pow(p1.y - p2.y, 2);
-        return Mathf.Sqrt(val);
+        return (p2 - p1).magnitude;
     }
 
     private void CheckBounds()
     {
         // TODO: improve boundary check
-        if (position.x < boundary.bounds.min.x + distToBoundary)
-            dX += boundary.bounds.min.x + distToBoundary - position.x;
-        if (position.y < boundary.bounds.min.y + distToBoundary)
-            dY += boundary.bounds.min.y + distToBoundary - position.y;
+        if (position.x < -boundary.x / 2 + distToBoundary)
+            dX += -boundary.x / 2 + distToBoundary - position.x;
+        if (position.z < -boundary.z / 2 + distToBoundary)
+            dZ += -boundary.z / 2 + distToBoundary - position.z;
 
-        if (position.x > boundary.bounds.max.x - distToBoundary)
-            dX += boundary.bounds.max.x - distToBoundary - position.x;
-        if (position.y > boundary.bounds.max.y - distToBoundary)
-            dY += boundary.bounds.max.y - distToBoundary - position.y;
+        if (position.x > boundary.x / 2 - distToBoundary)
+            dX += boundary.x / 2 - distToBoundary - position.x;
+        if (position.z > boundary.z / 2 - distToBoundary)
+            dZ += boundary.z / 2 - distToBoundary - position.z;
     }
 
     private void CheckSpeed()
@@ -153,15 +157,16 @@ public class Agent : MonoBehaviour {
         if (!isZombie) s = movementSpeed * Time.deltaTime;
         else s = movementSpeed / 3f * Time.deltaTime; //Zombie's are slower
 
-        float val = Distance(Vector2.zero, new Vector2(dX, dY));
+        float val = Distance(Vector2.zero, new Vector2(dX, dZ));
         if (val > s)
         {
             dX = dX * s / val;
-            dY = dY * s / val;
+            dZ = dZ * s / val;
         }
     }
 
-    public void OnTriggerEnter2D(Collider2D other)
+
+    public void OnTriggerEnter(Collider other)
     {
         Agent otherAgent = other.gameObject.GetComponent<Agent>();
 
@@ -176,6 +181,14 @@ public class Agent : MonoBehaviour {
     private void BecomeZombie()
     {
         isZombie = true;
-        sprRenderer.sprite = zombieSprite;
+        meshRenderer.material = zombieMaterial;
+    }
+
+    private Vector3 RandomPointOnPlane(GameObject plane)
+    {
+        float randomX = Random.Range(-boundary.x / 2f + distToBoundary, boundary.x / 2f - distToBoundary);
+        float randomZ = Random.Range(-boundary.z / 2f + distToBoundary, boundary.z / 2f - distToBoundary);
+
+        return new Vector3(randomX, 0, randomZ);
     }
 }
