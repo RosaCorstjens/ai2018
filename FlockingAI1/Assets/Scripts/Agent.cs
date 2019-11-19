@@ -184,4 +184,12 @@ public class Agent : MonoBehaviour {
         isZombie = true;
         sprRenderer.sprite = zombieSprite;
     }
+
+    private void OnDrawGizmosSelected() {
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(this.transform.position, sight);
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(this.transform.position, space);
+    }
 }
