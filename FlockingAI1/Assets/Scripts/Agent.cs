@@ -3,8 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Agent : MonoBehaviour {
-    private static float sight = 100f;
-    private static float space = 50f;
+    public static float sight = 100f;
+    public static float space = 50f;
+
+    public static float scaleFactorS = 3.5f;
+    public static float scaleFactorC = 0.01f;
+    public static float scaleFactorA = 1f;
+
     private static float movementSpeed = 75f;
     private static float rotateSpeed = 3f;
     private static float distToBoundary = 100f;
@@ -42,7 +47,8 @@ public class Agent : MonoBehaviour {
     public void Move(List<Agent> agents)
     {
         //Agents flock, zombie's hunt 
-        if (!isZombie) Flock(agents, 3.5f, 0.01f, 1f);
+        //if (!isZombie) Flock(agents, 3.5f, 0.01f, 1f);
+        if (!isZombie) Flock(agents, scaleFactorS, scaleFactorC, scaleFactorA);
         else Hunt(agents);
         CheckBounds();
         CheckSpeed();
